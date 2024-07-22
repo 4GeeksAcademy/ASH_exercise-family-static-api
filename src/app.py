@@ -44,51 +44,61 @@ def sitemap():
 def get_all_mems():
 
     members = jackson_family.get_all_members()
-   
-    return jsonify(members), 200
+    if members:
+        return jsonify(members), 200
+    return jsonify({"error": "Members not found"}), 400
 
 # GET MEMBER
-@app.route('/member/<int:member_id>', methods=['GET'])
-def get_mem(member_id):
-
-    member = jackson_family.get_member(member_id)
-    response_body = {
-        'member': member
-    }
-    # response_body = {
-    #     "name": member['first_name'],
-    #     "id": member['id'],
-    #     "age": member['age'],
-    #     "lucky_numbers": member['lucky_numbers']
-    # }
-
-    return jsonify(response_body), 200
+@app.route('/member/<int:id>', methods=['GET'])
+def get_mem(id):
+    member = jackson_family.get_member(id)
+    if member:
+        return jsonify(member), 200
+    return jsonify({"error": "Member not found"}), 400
 
 # ADD NEW MEMBER
 @app.route('/member', methods=['POST'])
 def add_mem():
     request_data = request.get_json()
-    new_member_id = jackson_family._generateId()
+    if not request_data:
+        return jsonify({"error": "no data provided"}), 400
+    
+    new_id = request_data.get('id', None)
+    new_name = request_data.get('first_name', '')
+    new_age = request_data.get('age', None)
+    new_lucky_numbers= request_data.get('lucky_numbers', [])
 
+    if not isinstance(new_name, str):
+        return jsonify({"error": "'first_name' must be a string"}), 400
+    if not isinstance(new_age, int) or new_age <= 0:
+        return jsonify({"error": "'age' must be an integer >0"}), 400
+    if not isinstance(new_lucky_numbers, list) or not all(isinstance(num, int) for num in new_lucky_numbers):
+        return jsonify({"error": "'lucky_numbers' must be a list of integers"}), 400
+    if new_id:
+        new_member_id = new_id
+    else: 
+        new_member_id = jackson_family._generateId()
+        
     new_member = {
         'id': new_member_id,
-        'first_name': request_data.get('first_name', ''),
-        'age': request_data.get('age', None),
-        'lucky_numbers': request_data.get('lucky_numbers', [])
+        'first_name': new_name,
+        'age': new_age,
+        'lucky_numbers': new_lucky_numbers
         }
 
     jackson_family.add_member(new_member)
-
-    response_body = {
-        "member": new_member
-    }
-
-    return jsonify(response_body), 200
+    
+    return jsonify(new_member), 200
 
 # DELETE MEMBER
-@app.route('/member/<int:member_id>', methods=['DELETE'])
-def del_mem(member_id):
-    jackson_family.delete_member(member_id)
+@app.route('/member/<int:id>', methods=['DELETE'])
+def del_mem(id):
+    # member = jackson_family.get_member(id)
+    # if member is None:
+    #     return jsonify({"error": "Member not found"}), 400
+
+
+    jackson_family.delete_member(id)
 
     response_body = {
         "done": True
